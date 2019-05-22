@@ -1,0 +1,96 @@
+-------------------MAP SIDE JOIN IN HIVE---------------------------
+Map side join is the process where the joins happens on the map phase without the involvment of the reduce phase.
+
+It is a useful feature when you are joining a big table with a small table. If we enable this feature , this small table wil be saved in the local cache of each node and 
+then joined with the big tables in the map phase.
+
+Dataset description of the first dataset is as follows:
+
+id,first_name,last_name,email,gender,ip_address
+
+Dataset description of the second dataset is as follows:
+
+id,first_name,last_name
+
+
+Here dataset2 is smaller in size than the dataset1.
+ So that's why we will perform the map join on dataset2.
+ 
+
+--------CREATE TABLE FOR dataset1-----------
+
+CREATE TABLE IF NOT EXISTS dataset1 ( eid int, first_name String, last_name String, email String, gender String, ip_address String) 
+row format delimited 
+fields terminated BY ',' 
+tblproperties("skip.header.line.count"="1");
+
+-------------CREATE TABLE FOR Dataset 2-------------
+
+CREATE TABLE IF NOT EXISTS dataset2 ( eid int, first_name String, last_name String)
+ row format delimited 
+ fields terminated BY ',' 
+ tblproperties("skip.header.line.count"="1");
+ 
+ ------LOADING THE DATA----------------------
+ 
+ LOAD DATA LOCAL INPATH 'home/zaidhasib/dataset1.csv' INTO TABLE DATASET1;
+ 
+ LOAD DATA LOCAL INPATH 'home/zaidhasib/dataset2.csv' INTO TABLE DATASET2;
+ 
+ 
+ ---------PROPERTIES-----------------------------
+ 
+ We have to set various properties before doing this join.
+ 
+ set hive.auto.convert.join=true;
+ (converting a common join into mapreduce job)
+ 
+ set hive.auto.convert.join.nonconditionaltask=true;
+ (it will convert the common join into the map oin based on the input size file)
+ 
+ ---MAP JOIN-----
+ 
+SELECT /*+ MAPJOIN(dataset2) */  dataset1.first_name, dataset1.eid,dataset2.eid FROM dataset1 JOIN dataset2 ON dataset1.first_name = dataset2.first_name;
+
+------------------BUCKET MAP JOIN----------------------
+
+CREATE TABLE FOR BUCKET
+
+CREATE TABLE IF NOT EXISTS dataset1_bucketed ( eid int,first_name String, last_name String, email String, gender String, ip_address String) 
+clustered by(first_name) into 4 buckets 
+row format delimited 
+fields terminated BY ',';
+
+CREATE TABLE IF NOT EXISTS dataset2_bucketed (eid int,first_name String, last_name String)
+ clustered by(first_name) into 8 buckets 
+ row format delimited
+ fields terminated BY ',' ;
+ 
+ insert into dataset1_bucketed select * from dataset1;
+ 
+ insert into dataset2_bucketed select * from dataset2;
+
+-to start the bucket join we have to first set the values
+set hive.optimize.bucketmapjoin = true
+
+SELECT /*+ MAPJOIN(dataset2_bucketed) */ dataset1_bucketed.first_name,dataset1_bucketed.eid, dataset2_bucketed.eid FROM dataset1_bucketed JOIN dataset2_bucketed ON dataset1_bucketed.first_name = dataset2_bucketed.first_name ;
+
+
+----------SORT MERGE JOIN----------------------
+
+In the sort merge join , the same column should be bucketed and sorted.
+
+insert overwrite table dataset1_bucketed select * from dataset1 sort by first_name;
+
+insert overwrite table dataset2_bucketed select * from dataset2 sort by first_name;
+
+CREATE TABLE IF NOT EXISTS dataset2_bucketed1 (eid int,first_name String, last_name String) clustered by(first_name) into 4 buckets row format delimited fields terminated BY ',' ;   --4 bucket
+
+SELECT /*+ MAPJOIN(dataset2_sbucketed1) */dataset1_bucketed.first_name, dataset1_bucketed.eid, dataset2_bucketed1.eid FROM dataset1_bucketed JOIN dataset2_bucketed1 ON dataset1_bucketed.first_name = dataset2_bucketed1.first_name ;
+
+
+ 
+ 
+ 
+ 
+ 
