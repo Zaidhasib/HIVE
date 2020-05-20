@@ -1,0 +1,332 @@
+-------------------------------------Project1: banking data analysis using Hadoop-----------------------------------------------
+Problem:
+A banking & credit card compant is trying to use hadoop technologoes to handle & analyze large amount of data sets.
+Current data is present in the RDBMS , but want to use hadoop ecosytem for the storage.
+-----------------------------------------------------------------
+SOLUTION
+
+---------------------------LOADING DATA INTO MYSQL-------------------------
+[cloudera@quickstart ~]$ mysql -u root -p
+Enter password: 
+
+create database bank;
+use bank;
+
+TABLE                            INCREMENTAL COLUMN
+loan_info                         loan_id
+credit_card_info                  cc_number
+shares_info                        gmt_timestand
+
+
+--------------------------creating table loan_info------------------------
+CREATE TABLE loan_info(
+loan_id int,
+user_id int,
+last_payment_date date,
+payment_installation double,
+date_payable date);
+
+inserting into loan_info
+
+insert into loan_info values(1234,15678,'2019-02-20',509,'2019-03-20');
+insert into loan_info values(2345,25678,'2019-02-21',609,'2019-03-21');
+insert into loan_info values(3456,35678,'2019-02-22',709,'2019-03-22');
+insert into loan_info values(4567,45678,'2019-02-23',809,'2019-03-23');
+
+
+-------------------------creating table credit card info------------------
+CREATE TABLE credit_card_info(
+cc_number bigint,
+user_id int,
+maximum_credit double,
+outstanding_balance double,
+due_date date
+);
+
+insert into credit_card_info values (1111111111111111,1234,300000,150000,'2019-03-20');
+insert into credit_card_info values (2222222222222222,2234,500000,250000,'2019-03-21');
+insert into credit_card_info values (3333333333333333,3234,700000,350000,'2019-03-22');
+insert into credit_card_info values (4444444444444444,1234,900000,450000,'2019-03-23');
+
+--------------------------creating shares_info table------------------
+CREATE TABLE shares_info
+(
+share_id varchar(10),
+company_name varchar(20),
+gmt_timestamp bigint,
+share_price double
+);
+
+insert into shares_info values('S102','MyCorp',1488412702,100);
+insert into shares_info values('S102','MyCorp',1488412802,110);
+insert into shares_info values('S102','MyCorp',1488412902,102);
+insert into shares_info values('S102','MyCorp',1488412502,190);
+
+
+commit;
+
+------------------------------EXPORTING DATA FROM MYSQL TO HDFS USING SQOOP---------
+
+CREATE USER 'myuser'@'localhost' IDENTIFIED BY 'myuser';
+grant all privileges on*.*to 'myuser'@'localhost' with grant option;
+flush privileges;
+commit;
+
+
+we can protect mysql password by saving the password in a file
+echo -n "myuser">>sqoop_mysql_password
+
+ls -ltr
+
+sqoop job --create sqoop_loan_info -- import --connect jdbc:mysql://127.0.0.1:3306/bank --username myuser --password-file  file:///home/cloudera/sqoop_mysql_password --table loan_info --target-dir /user/cloudera/output/loan_info_stg -m1
+
+sqoop job --exec sqoop_loan_info
+
+[cloudera@quickstart ~]$ hadoop fs -cat /user/cloudera/output/loan_info_stg/part-m-00000
+
+sqoop job --create sqoop_credit_card_info -- import --connect jdbc:mysql://127.0.0.1:3306/bank --username myuser --password-file  file:///home/cloudera/sqoop_mysql_password --table credit_card_info --target-dir /user/cloudera/output/credit_card_info_stg -m1
+
+sqoop job --exec credit_card_info
+
+hadoop fs -rm -r /path/
+
+sqoop job --create sqoop_shares_info -- import --connect jdbc:mysql://127.0.0.1:3306/bank --username myuser --password-file  file:///home/cloudera/sqoop_mysql_password --table shares_info --target-dir /user/cloudera/output/shares_info_stg -m1
+
+sqoop job --exec sqoop_shares_info
+
+
+------------------------------------------CREATING EXTERNAL TABLES IN HIVE-------------------------------
+
+CREATE DATABASE bank;
+
+CREATE  EXTERNAL TABLE loan_info_stg
+(
+loan_id int,
+user_id int,
+last_payment_date string,
+payment_installation double,
+date_payable string
+)
+ROW FORMAT DELIMITED
+FIELDS TERMINATED BY ','
+LOCATION '/user/cloudera/output/loan_info_stg';
+----------------------------------------------------
+CREATE  EXTERNAL TABLE loan_info_stg
+(
+loan_id int,
+user_id int,
+last_payment_date string,
+payment_installation double,
+date_payable string
+)
+ROW FORMAT DELIMITED
+FIELDS TERMINATED BY ','
+LOCATION '/user/cloudera/output/loan_info_stg';
+-----------------------------------------------------
+CREATE EXTERNAL TABLE credit_card_info_stg
+(
+cc_number string,
+user_id int,
+maximum_credit double,
+outstanding_balance double,
+due_date string
+)
+ROW FORMAT DELIMITED
+FIELDS TERMINATED BY ','
+LOCATION '/user/cloudera/output/credit_card_info_stg';
+--------------------------------------------------------
+CREATE EXTERNAL TABLE shares_info_stg
+(
+share_id string,
+company_name string,
+gmt_timestamp bigint,
+share_price double
+)
+ROW FORMAT DELIMITED
+FIELDS TERMINATED BY ','
+LOCATION '/user/cloudera/output/shares_info_stg';
+
+
+-------------------------------------------------------------------------------------------------------
+
+
+
+/*********************DECRYPT****************************/
+package encryption;
+
+import javax.crypto.Cipher;
+import javax.crypto.spec.SecretKeySpec;
+import org.apache.commons.codec.binary.Base64;
+import org.apache.hadoop.hive.ql.exec.UDF;
+
+public class AESdecrypt extends UDF {
+
+    public String evaluate(String input) {
+        try {
+            byte[] password = new String("abcdefghijklmnol").getBytes();
+            // The password need to be 8, 16, 32 or 64 characters long to be used in AES encryption. It should also be the same which is used while encryption.
+            Cipher cipher = Cipher.getInstance("AES/ECB/PKCS5Padding");
+
+            SecretKeySpec keySpec = new SecretKeySpec(password, "AES");
+            cipher.init(Cipher.DECRYPT_MODE, keySpec);
+            String output = new String(cipher.doFinal(Base64.decodeBase64(input)));
+            return output.trim();
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+}
+
+/*********************ENCRYPT****************************/
+
+package encryption;
+
+import javax.crypto.Cipher;
+import javax.crypto.spec.SecretKeySpec;
+import org.apache.commons.codec.binary.Base64;
+import org.apache.hadoop.hive.ql.exec.UDF;
+
+public class AESencrypt extends UDF {
+
+    public String evaluate(String input) {
+        try {
+            byte[] password = new String("abcdefghijklmnol").getBytes();
+            // The password need to be 8, 16, 32 or 64 characters long to be used in AES encryption
+            Cipher cipher = Cipher.getInstance("AES/ECB/PKCS5Padding");
+            SecretKeySpec keySpec = new SecretKeySpec(password, "AES");
+            cipher.init(Cipher.ENCRYPT_MODE, keySpec);
+            String output = Base64.encodeBase64String(cipher.doFinal(input.getBytes()));
+            
+            return output;
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+}
+
+
+hive> add jar file:///home/cloudera/Desktop/encrypt.jar;
+Added [file:///home/cloudera/Desktop/encrypt.jar] to class path
+Added resources: [file:///home/cloudera/Desktop/encrypt.jar]
+hive> add jar file:///home/cloudera/Desktop/decrypt.jar;
+Added [file:///home/cloudera/Desktop/decrypt.jar] to class path
+Added resources: [file:///home/cloudera/Desktop/decrypt.jar]
+
+
+CREATE TEMPORARY FUNCTION encrypt AS 'encryption.AESencrypt';
+CREATE TEMPORARY FUNCTION decrypt AS 'encryption.AESdecrypt';
+
+
+------------------------CREATING loan_info table------------------
+CREATE TABLE loan_info(
+Loan_id string,
+User_id string,
+last_payment_date string,
+payment_installation string,
+Date_payable string)
+STORED AS ORC;  //OPTIMAIZATION TECHNIQUE FOR NORMALIXATION
+
+INSERT INTO TABLE loan_info 
+SELECT encrypt(Loan_id),encrypt(User_id),encrypt(last_payment_date),
+encrypt(payment_installation),encrypt(Date_payable) from loan_info_stg;
+
+
+------------------------CREATING credit_card_info table--------------
+ CREATE TABLE credit_card_info 
+ (
+ cc_number string,
+ user_id string,
+ maximum_credit string,
+ outstanding_balance string,
+ due_date string
+ )
+ STORED AS ORC;
+ 
+ 
+ INSERT INTO TABLE credit_card_info 
+ SELECT encrypt(cc_number),encrypt(user_id),
+ encrypt(maximum_credit),encrypt(outstanding_balance),encrypt(due_date) 
+ from credit_card_info_stg;
+
+ -------------------------CREATING shares_info table--------------
+ CREATE TABLE shares_info
+ (
+ Share_id string,
+ Company_name string,
+ Gmt_timestamp string,
+ Share_price string
+ )
+ STORED AS ORC;
+ 
+ INSERT INTO TABLE shares_info
+ SELECT encrypt(Share_id),encrypt(Company_name),
+ encrypt(Gmt_timestamp),encrypt(Share_price) FROM shares_info_stg;
+ 
+ 
+ 
+ 
+ --NOW YOU CAN TRUNCATE TABLE AS THE DATA THAT IS PRESENT IN ENCRYPTED MODE SO WE HAVE ENCYPTED DATA
+ 
+ 
+--TABLES OF CONTENT
+1.Creating the Hadoop Cluster and deploying test codes.
+2.Data Ingestion
+3.Table Details
+4.Analysis
+5.Archival
+
+
+
+1.Find ot the list of users who have atleast 2 loan installements pending.(tenure 60 days);
+
+
+CREATE TEMPORARY FUNCTION encrypt AS 'encryption.AESencrypt';
+CREATE TEMPORARY FUNCTION decrypt AS 'encryption.AESdecrypt';
+CREATE TEMPORARY FUNCTION max_profit AS 'maxprofit.Maxprofit';
+
+SET hive.auto.convert.join=false;
+
+SELECT decrypt(user_id) FROM loan_info WHERE 
+datediff( from_unixtime(unix_timestamp(),'yyyy-mm-dd'),
+decrypt(last_payment_date))>=60;
+
+2. Find the list of users who have a healthy crdit card but outstanding loan account, (Healthy means no outstanding balance)
+
+SELECT decrypt(li.user_id) FROM loan_info li inner join credit_card_info 
+cci ON decrypt(li.user_id)= decrypt(cci.user_id) 
+where CAST(decrypt(cci.outstanding_balance) AS double)=0.0
+AND datediff(from_unixtime(unix_timestamp(),'yyyy-mm-dd'),decrypt(li.last_payment_date))>=30;
+
+
+
+
+Archival
+
+[cloudera@quickstart ~]$ cd /home/cloudera/Desktop/bank_data
+[cloudera@quickstart bank_data]$ ls
+data1.txt  data2.txt  data3.txt
+[cloudera@quickstart bank_data]$ cat *.txt>survey_data
+[cloudera@quickstart bank_data]$ ls
+data1.txt  data2.txt  data3.txt  survey_data
+ 
+ ----------------CREATE hive table to load survey_data------------------------------------------
+ 
+ CREATE TABLE survey_analysis
+ (
+ survey_date string,
+ survey_feedback string,
+ rating int,
+ user_id int,
+ survey_id string)
+ ROW FORMAT DELIMITED
+ FIELDS TERMINATED BY ',';
+ 
+ 
+ hive> LOAD DATA LOCAL INPATH '/home/cloudera/Desktop/bank_data/survey_data' INTO TABLE survey_analysis;
+
+
+

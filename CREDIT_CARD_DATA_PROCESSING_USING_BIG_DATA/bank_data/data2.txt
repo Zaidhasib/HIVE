@@ -1,0 +1,31 @@
+2019-01-27,Morbi non lectus.,40,74,97
+2018-04-03,Nullam molestie nibh in lectus.,41,88,56
+2018-07-19,Vestibulum sed magna at nunc commodo placerat.,42,50,9
+2018-08-28,Mauris ullamcorper purus sit amet nulla.,43,13,56
+2018-12-18,"Nam ultrices, libero non mattis pulvinar, nulla pede ullamcorper augue, a suscipit nulla elit ac nulla.",44,81,75
+2018-10-02,In congue.,45,18,54
+2018-04-22,Duis ac nibh.,46,2,14
+2018-09-04,Donec semper sapien a libero.,47,90,83
+2018-05-26,Donec posuere metus vitae ipsum.,48,95,82
+2018-05-25,Morbi vel lectus in quam fringilla rhoncus.,49,64,96
+2018-12-10,Suspendisse potenti.,50,73,81
+2019-01-28,"Cum sociis natoque penatibus et magnis dis parturient montes, nascetur ridiculus mus.",51,55,91
+2018-06-25,Mauris ullamcorper purus sit amet nulla.,52,65,4
+2018-11-11,Aenean auctor gravida sem.,53,11,69
+2018-04-25,"Morbi sem mauris, laoreet ut, rhoncus aliquet, pulvinar sed, nisl.",54,45,76
+2018-04-14,Proin at turpis a pede posuere nonummy.,55,60,69
+2018-12-31,Aliquam sit amet diam in magna bibendum imperdiet.,56,60,18
+2018-04-03,Aliquam sit amet diam in magna bibendum imperdiet.,57,45,100
+2018-05-31,"Maecenas tristique, est et tempus semper, est quam pharetra magna, ac consequat metus sapien ut nunc.",58,97,96
+2018-03-31,Suspendisse potenti.,59,30,64
+2018-11-17,"Nulla neque libero, convallis eget, eleifend luctus, ultricies eu, nibh.",60,76,77
+2018-03-17,Etiam vel augue.,61,9,30
+2019-02-08,Nulla mollis molestie lorem.,62,15,13
+2018-11-15,Nulla tempus.,63,46,8
+2018-09-27,Pellentesque at nulla.,64,61,70
+2018-09-09,Donec ut mauris eget massa tempor convallis.,65,34,17
+2018-04-07,Integer tincidunt ante vel ipsum.,66,98,19
+2018-07-17,Integer tincidunt ante vel ipsum.,67,100,33
+2018-03-10,"Proin leo odio, porttitor id, consequat in, consequat ut, nulla.",68,97,80
+2018-10-01,In hac habitasse platea dictumst.,69,71,100
+2018-07-06,Cras pellentesque volutpat dui.,70,51,69
